@@ -1,24 +1,15 @@
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
-from bot import Ramen
 from datetime import datetime, timedelta
-import pyvolt
-import jwt
-import os
-import secrets
-import hashlib
-from fastapi import APIRouter, Depends
+from bot import Toko
+import pyvolt, os, secrets, hashlib
+from fastapi import Depends
 from api.v1.dependencies.auth import get_current_user_id
+from api.v1.utils import generate_6_digit_code, create_encrypted_token, code_store
 
 router = APIRouter()
-bot = Ramen()
-db = bot.db
-JWT_SECRET = os.getenv("JWT_SECRET")
+bot = Toko()
 
-# In-memory store for example purposes – consider persisting this.
-code_store = {}
-
-# Request and Response Models
 class CodeRequest(BaseModel):
     user_id: str
 
@@ -34,20 +25,6 @@ class UserResponse(BaseModel):
     created_at: datetime
     expires_at: datetime
 
-# Helpers
-def generate_6_digit_code() -> str:
-    return f"{secrets.randbelow(900000) + 100000:06d}"
-
-def create_encrypted_token(user_id: str, code: str) -> str:
-    payload = {
-        "user_id": user_id,
-        "code_hash": hashlib.sha256(code.encode()).hexdigest(),
-        "created_at": datetime.utcnow().isoformat(),
-        "exp": datetime.utcnow() + timedelta(days=7)
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
-
-# Routes
 @router.post("/generate-code", response_model=CodeResponse)
 async def generate_code(request: CodeRequest):
     try:
@@ -55,14 +32,24 @@ async def generate_code(request: CodeRequest):
         user: pyvolt.User = await bot.fetch_user(request.user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        
-        # Store code for verification later (simple store)
+
         code_store[request.user_id] = {
             "code_hash": hashlib.sha256(code.encode()).hexdigest(),
             "created_at": datetime.utcnow()
         }
 
-        await user.send(f"Your verification code is: {code} ✅")
+        em = [pyvolt.SendableEmbed(
+            title="🔐 This code is private. Do not share it.",
+            description=f"""**Your login code is:** **`{code}`**
+
+               This code expires in 10 minutes.
+               For security reasons, please do not share this code with anyone.
+
+               *If you did not request this code, please ignore this message.*""",
+               color="#242424"
+        )]
+
+        await user.send(embeds=em)
         return CodeResponse(message="Code sent successfully.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating code: {str(e)}")
@@ -79,9 +66,21 @@ async def verify_code(request: VerifyCodeRequest, response: Response):
             raise HTTPException(status_code=401, detail="Invalid verification code.")
 
         token = create_encrypted_token(request.user_id, request.code)
-        response.set_cookie("auth_token", token, httponly=True)
+
+        is_production = os.getenv("ENVIRONMENT") == "production"
+        response.set_cookie(
+            key="auth_token",
+            value=token,
+            httponly=True,
+            secure=is_production,
+            samesite="lax",
+            max_age=7 * 24 * 60 * 60,
+            path="/",
+        )
 
         expires_at = datetime.utcnow() + timedelta(days=7)
+        del code_store[request.user_id]
+
         return UserResponse(
             user_id=request.user_id,
             created_at=stored["created_at"],
@@ -92,4 +91,9 @@ async def verify_code(request: VerifyCodeRequest, response: Response):
 
 @router.get("/auth/verify")
 async def verify_token(user_id: str = Depends(get_current_user_id)):
-    return {"user_id": user_id}
+    return {"user_id": user_id, "authenticated": True}
+
+@router.post("/auth/logout")
+async def logout(response: Response):
+    response.delete_cookie(key="auth_token", path="/")
+    return {"message": "Logged out successfully"}

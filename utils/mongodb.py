@@ -36,7 +36,7 @@ if not logger.handlers:
             levelname = record.levelname.upper()
             level = f"{self.colour.levels.get(levelname, '')}{levelname:<8}{self.colour.reset}"
             timestamp = f"{self.colour.timestamp}{self.formatTime(record, self.datefmt)}{self.colour.reset}"
-            label = f"{self.colour.label}MongoDB{self.colour.reset}"
+            label = f"{self.colour.label}TokoDB{self.colour.reset}"
             return f"{timestamp} {level} {label}  {record.getMessage()}"
 
     formatter = MongoFormatter(fmt="%(asctime)s %(levelname)s %(name)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
@@ -51,20 +51,20 @@ if not logger.handlers:
 
 # === MongoDB Wrapper ===
 
-class RamenDatabase:
+class TokoDatabase:
     def __init__(self):
-        load_dotenv("config/.env")
+        load_dotenv()
         self._client = MongoClient(os.getenv("mongoURI"))
-        self._db = self._client["Ramen"] 
+        self._db = self._client["Toko"]
 
         self.prefixes = self._db["prefixes"]
-        self.servers = self._db["servers"]
+        self.servers_logging = self._db["server_logging"]
         self.user = self._db["users"]
 
     def ping(self) -> float | None:
         try:
             start = time.time()
-            self._client.admin.command("ping")
+            self._client.admin.command("ping")  
             return round((time.time() - start) * 1000, 2)
         except ConnectionFailure as e:
             logger.error(f"Failed to ping MongoDB:\n{e}")
@@ -77,3 +77,5 @@ class RamenDatabase:
             logger.info(f"Connected to MongoDB. Ping: {ms}ms")
         else:
             logger.warning("Connection established, but ping failed.")
+
+db = TokoDatabase()

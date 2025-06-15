@@ -5,10 +5,9 @@ import os
 JWT_SECRET = os.getenv("JWT_SECRET")
 
 def get_current_user_id(request: Request) -> str:
-    print("🔍 Received cookies in /auth/verify:", request.cookies)
     token = request.cookies.get("auth_token")
 
-    # Optional: support Authorization header
+    # Fallback to Authorization header
     if not token:
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
