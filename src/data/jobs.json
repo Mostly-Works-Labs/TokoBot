@@ -1,0 +1,92 @@
+[
+    {
+        "name": "Delivery Driver",
+        "min_income": 50,
+        "max_income": 100,
+        "rarity": "common"
+    },
+    {
+        "name": "Barista",
+        "min_income": 60,
+        "max_income": 110,
+        "rarity": "common"
+    },
+    {
+        "name": "YouTuber",
+        "min_income": 100,
+        "max_income": 200,
+        "rarity": "uncommon"
+    },
+    {
+        "name": "Influencer",
+        "min_income": 120,
+        "max_income": 250,
+        "rarity": "uncommon"
+    },
+    {
+        "name": "Revolt Mod",
+        "min_income": 200,
+        "max_income": 300,
+        "rarity": "rare"
+    },
+    {
+        "name": "CEO of TokoCorp",
+        "min_income": 300,
+        "max_income": 500,
+        "rarity": "legendary"
+    },
+    {
+        "name": "Dumpster Diver",
+        "min_income": 5,
+        "max_income": 20,
+        "rarity": "silly"
+    },
+    {
+        "name": "AI Whisperer",
+        "min_income": 150,
+        "max_income": 300,
+        "rarity": "rare"
+    },
+    {
+        "name": "Toko Support Agent",
+        "min_income": 80,
+        "max_income": 150,
+        "rarity": "common"
+    },
+    {
+        "name": "Server Clown",
+        "min_income": 20,
+        "max_income": 40,
+        "rarity": "silly"
+    },
+    {
+        "name": "Bug Squasher",
+        "min_income": 90,
+        "max_income": 160,
+        "rarity": "uncommon"
+    },
+    {
+        "name": "Undercover Bot",
+        "min_income": 130,
+        "max_income": 220,
+        "rarity": "rare"
+    },
+    {
+        "name": "Pixel Artist",
+        "min_income": 110,
+        "max_income": 190,
+        "rarity": "uncommon"
+    },
+    {
+        "name": "Shitposter",
+        "min_income": 1,
+        "max_income": 5,
+        "rarity": "silly"
+    },
+    {
+        "name": "Thief",
+        "min_income": -100,
+        "max_income": 300,
+        "rarity": "risky"
+    }
+]
