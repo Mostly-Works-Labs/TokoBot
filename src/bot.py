@@ -2,12 +2,20 @@ import os
 import sys
 import logging
 import pyvolt
+import sentry_sdk  # Sentry integration
 
 from dotenv import load_dotenv
 from pyvolt.ext import commands
 from utils.mongodb import TokoDatabase
 
 load_dotenv()
+
+# === Sentry Setup ===
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    traces_sample_rate=1.0,
+    environment=os.getenv("ENVIRONMENT", "production"),
+)
 
 # === Prepare log directory ===
 LOG_DIR = os.path.join(os.path.dirname(__file__), "logs")
@@ -80,12 +88,12 @@ class Toko(commands.Bot):
         self.logger = logger
 
     async def load_cogs(self) -> None:
-        cog_dir = os.path.join(os.path.dirname(__file__), "cogs")
-        for file in os.listdir(cog_dir):
+        modules_dir = os.path.join(os.path.dirname(__file__), "modules")
+        for file in os.listdir(modules_dir):
             if file.endswith(".py"):
                 ext = file[:-3]
                 try:
-                    await self.load_extension(f"cogs.{ext}")
+                    await self.load_extension(f"modules.{ext}")
                     logger.info(f"Loaded extension '{ext}'")
                 except commands.errors.ExtensionAlreadyLoaded:
                     pass
@@ -100,23 +108,26 @@ class Toko(commands.Bot):
 
         server_id = message.server.id
         server_name = message.server.name
-        collection = self.db.prefixes.find_one({"_id": server_id})
+
+        from models.Prefix import Prefix  
+
+        collection = await Prefix.find_one({"_id": server_id})
 
         if collection:
-            return [collection.get("prefix", default_prefix)]
+            return [collection.prefix if hasattr(collection, "prefix") else default_prefix]
 
-        self.db.prefixes.insert_one({
-            "_id": server_id,
-            "servername": server_name,
-            "prefix": default_prefix
-        })
+        await Prefix.insert_one(Prefix(
+            id=server_id,
+            servername=server_name,
+            prefix=default_prefix
+        ))
         return [default_prefix]
 
     async def setup_hook(self) -> None:
-        self.db.connect()
+        await self.db.connect()
         await self.load_cogs()
 
-    async def on_ready(self, event) -> None:
+    async def on_ready(self, event) -> None: 
         logger.info(f"Logged in as {self.user.name} ({self.user.id})")
 
 # === Run Bot ===

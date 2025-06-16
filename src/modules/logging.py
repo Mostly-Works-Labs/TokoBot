@@ -4,7 +4,6 @@ from tools.db_funcs import *
 from bot import Toko
 from tools.permission_flags import PERMISSION_FLAGS  # move flags to separate file
 
-
 class Logging(commands.Gear):
     def __init__(self, bot: Toko):
         self.bot = bot
@@ -15,15 +14,15 @@ class Logging(commands.Gear):
             return user.avatar.url()
         return self.bot.http.url_for(pyvolt.routes.USERS_GET_DEFAULT_AVATAR.compile(user_id=user.id))
 
-    def get_cached_log_channel(self, server_id: str, category: str, event_type: str):
+    async def get_cached_log_channel(self, server_id: str, category: str, event_type: str):
         if server_id not in self.log_cache:
             self.log_cache[server_id] = {}
         if category not in self.log_cache[server_id]:
             self.log_cache[server_id][category] = {}
         if event_type not in self.log_cache[server_id][category]:
-            ensure_logging_config(server_id, None)
-            if should_log(server_id, category, event_type):
-                config = get_log_channel(server_id, category, event_type)
+            await ensure_logging_config(server_id, None)
+            if await should_log(server_id, category, event_type):
+                config = await get_log_channel(server_id, category, event_type)
                 self.log_cache[server_id][category][event_type] = config
             else:
                 self.log_cache[server_id][category][event_type] = None
@@ -48,7 +47,7 @@ class Logging(commands.Gear):
         if not server or author.bot:
             return
 
-        log_config = self.get_cached_log_channel(server.id, "message_logs", "message_delete")
+        log_config = await self.get_cached_log_channel(server.id, "message_logs", "message_delete")
         if not log_config or not log_config.get("channel_id"):
             return
 
@@ -63,7 +62,14 @@ class Logging(commands.Gear):
         embed_description = (
             f"**Channel:** {message.channel.mention}\n"
             f"**Author:** {author.mention} (`{author.id}`)\n"
-            f"**Time:** `{timestamp.strftime('%H:%M %Y-%m-%d') if timestamp else 'Unknown'}`\n\n"
+        )
+
+        if timestamp:
+            embed_description += f"**Time:** <t:{int(timestamp.timestamp())}:F>\n\n"
+        else:
+            embed_description += "**Time:** Unknown\n\n"
+
+        embed_description += (
             f"**Content:**\n```text\n{content}\n```\n"
             f"`Message ID:` `{message.id}`"
         )
@@ -90,7 +96,7 @@ class Logging(commands.Gear):
         if not server or author.bot:
             return
 
-        log_config = self.get_cached_log_channel(server.id, "message_logs", "message_edit")
+        log_config = await self.get_cached_log_channel(server.id, "message_logs", "message_edit")
         if not log_config or not log_config.get("channel_id"):
             return
 
@@ -117,7 +123,7 @@ class Logging(commands.Gear):
 
         is_creation = e.old_role is None and e.new_role is not None
         event_type = "role_create" if is_creation else "role_update"
-        log_config = self.get_cached_log_channel(server.id, "role_logs", event_type)
+        log_config = await self.get_cached_log_channel(server.id, "role_logs", event_type)
         if not log_config or not log_config.get("channel_id"):
             return
 
@@ -183,7 +189,7 @@ class Logging(commands.Gear):
         if not server or not role:
             return
 
-        log_config = self.get_cached_log_channel(server.id, "role_logs", "role_delete")
+        log_config = await self.get_cached_log_channel(server.id, "role_logs", "role_delete")
         if not log_config or not log_config.get("channel_id"):
             return
 
@@ -205,7 +211,7 @@ class Logging(commands.Gear):
         if not server or not channel:
             return
 
-        log_config = self.get_cached_log_channel(server.id, "channel_logs", "channel_create")
+        log_config = await self.get_cached_log_channel(server.id, "channel_logs", "channel_create")
         if not log_config or not log_config.get("channel_id"):
             return
 
@@ -230,7 +236,7 @@ class Logging(commands.Gear):
         if not server or not old or not new:
             return
 
-        log_config = self.get_cached_log_channel(server.id, "channel_logs", "channel_update")
+        log_config = await self.get_cached_log_channel(server.id, "channel_logs", "channel_update")
         if not log_config or not log_config.get("channel_id"):
             return
 
@@ -270,7 +276,7 @@ class Logging(commands.Gear):
         if not server or not channel:
             return
 
-        log_config = self.get_cached_log_channel(server.id, "channel_logs", "channel_delete")
+        log_config = await self.get_cached_log_channel(server.id, "channel_logs", "channel_delete")
         if not log_config or not log_config.get("channel_id"):
             return
 
